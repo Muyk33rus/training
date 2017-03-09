@@ -1,0 +1,8 @@
+ch1=int(input())
+mi1=int(input())
+sec1=int(input())
+ch2=int(input())
+mi2=int(input())
+sec2=int(input())
+tim=(ch2-ch1)*3600+(mi2-mi1)*60+(sec2-sec1)
+print(int(tim))

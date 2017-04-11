@@ -26,8 +26,8 @@ int main() {
     a=new int[3];
     b=new int[3];
     cin >> a[0] >> a[1] >> a[2] >> b[0] >> b[1] >> b[2];
-//    a=sort(a);
-//    b=sort(b);
+//    sort(a);
+//    sort(b);
     sort(a, a + 3);
     sort(b, b + 3);
     for (int i = 0;i < 3;i++) {

@@ -192,14 +192,14 @@
            <item>
             <layout class="QVBoxLayout" name="verticalLayout">
              <item>
-              <widget class="QCheckBox" name="TCP">
+              <widget class="QRadioButton" name="TCP">
                <property name="text">
                 <string>TCP</string>
                </property>
               </widget>
              </item>
              <item>
-              <widget class="QCheckBox" name="UDP">
+              <widget class="QRadioButton" name="UDP">
                <property name="text">
                 <string>UDP</string>
                </property>

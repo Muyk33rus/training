@@ -62,7 +62,7 @@ void MainWindow::sendMessage()
 {
     QByteArray baDatagram;
     QDataStream out(&baDatagram, QIODevice::WriteOnly);
-    out<<ui->message->text();
+    out<< QTime::currentTime()<<ui->message->text();
 //    ui->logList->append(ui->message->text());
 //    ui->logList->append(ui->address->currentText());
 //    ui->logList->append(ui->port->text());

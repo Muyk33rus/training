@@ -1,25 +1,31 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 #include <QDebug>
+#include <opencv2/highgui.hpp>
+#include <opencv/cv.h>
+#include <QImage>
+#include <QImageWriter>
+#include <QImageReader>
+#include <QFileDialog>
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
 {
-    QMainWindow::setFixedSize(370,420);
-    UDPserver  =  new QUdpSocket();
+    QMainWindow::setFixedSize(370,640);
+    UdpSocket  =  new QUdpSocket();
     TCPserver  =  new QTcpServer();
     TcpSocket   =  new QTcpSocket(this);
     ui->setupUi(this);
 
     ui->logList->setReadOnly(true);
     pTimer = new QTimer(this);
-    ui->UDP->setChecked(true);
+    ui->TCP->setChecked(true);
     ui->send->setCheckable(true);
     ui->send->setChecked(false);
     ui->receive->setCheckable(true);
     ui->receive->setChecked(false);
-
+    ui->UDP->setDisabled(true);
     connect(ui->receive,SIGNAL(clicked()),this,SLOT(receivingMessage()));
     connect(ui->send,   SIGNAL(clicked()),this,SLOT(timeSend())     );
     connect(ui->UDP,    SIGNAL(clicked()),this,SLOT(clickedUDP())   );
@@ -30,10 +36,10 @@ MainWindow::MainWindow(QWidget *parent) :
 
 MainWindow::~MainWindow()
 {
-    UDPserver->abort();
+    UdpSocket->abort();
     delete ui;
     delete pTimer;
-    delete UDPserver;
+    delete UdpSocket;
 }
 
 void MainWindow::sendToTcpClient(QTcpSocket *pSocket, QByteArray &arrBlock)
@@ -58,16 +64,25 @@ void MainWindow::slotError(QAbstractSocket::SocketError err)
     ui->logList->append(strError);
 }
 
+
+
 void MainWindow::sendMessage()
 {
+    QBuffer buffer;
     QByteArray baDatagram;
     QDataStream out(&baDatagram, QIODevice::WriteOnly);
-    out<< QTime::currentTime()<<ui->message->text();
-//    ui->logList->append(ui->message->text());
-//    ui->logList->append(ui->address->currentText());
-//    ui->logList->append(ui->port->text());
+
+    IplImage* img = cvQueryFrame( capture );
+    if (!img)
+       return;
+    QImage imgDst((uchar*)img->imageDataOrigin , img->width , img->height , QImage::Format_RGB888);
+    QImageWriter writer(&buffer,"jpg");
+    writer.write(imgDst);
+    ui->lol->setPixmap(QPixmap::fromImage(imgDst.scaled(ui->lol->width(), ui->lol->height())));
+    out<<(quint32)buffer.size()<<ui->message->text();
+    baDatagram.append(buffer.data());
     if(ui->UDP->isChecked())
-        UDPserver->writeDatagram(baDatagram,QHostAddress(ui->address->currentText()) , ui->port->currentText().toInt());
+        UdpSocket->writeDatagram(baDatagram,QHostAddress(ui->address->currentText()) , ui->port->currentText().toInt());
     if(ui->TCP->isChecked()){
         TcpSocket->write(baDatagram);
     }
@@ -79,17 +94,17 @@ void MainWindow::receivingMessage()
     if(ui->receive->isChecked()){
 
         if(ui->port->currentText().toInt()<=0){
-            QMessageBox::critical (0,"Ошибка!","Порт не выбран!",QMessageBox::Yes);
+            QMessageBox::critical (0,"Ошибка!","Порт не выбран!",QMessageBox::Ok);
             ui->receive->setChecked(false);
         }
         else{
             if(ui->UDP->isChecked()){
-                if(!UDPserver->bind(ui->port->currentText().toInt())){
-                    QMessageBox::critical (0,"Ошибка!","Данный порт занят!",QMessageBox::Yes);
+                if(!UdpSocket->bind(ui->port->currentText().toInt())){
+                    QMessageBox::critical (0,"Ошибка!","Данный порт занят!",QMessageBox::Ok);
                     ui->receive->setChecked(false);
                 }
                 else{
-                    connect(UDPserver,SIGNAL(readyRead()),SLOT(messageRead()));
+                    connect(UdpSocket,SIGNAL(readyRead()),SLOT(messageRead()));
                     ui->send->setDisabled(true);
                     ui->port->setEnabled(false);
                     ui->rate->setReadOnly(true);
@@ -108,6 +123,8 @@ void MainWindow::receivingMessage()
                 else
                     hostAddress= QHostAddress(str);
                 if(TCPserver->listen(hostAddress,ui->port->currentText().toInt())){
+                    countTcpSok=0;
+                    MapTcpSok= new QMap<int,QTcpSocket*>;
                     connect(TCPserver,SIGNAL(newConnection()),this, SLOT(slotNewTcpConnection()));
                     ui->send->setDisabled(true);
                     ui->port->setEnabled(false);
@@ -117,7 +134,7 @@ void MainWindow::receivingMessage()
                     ui->TCP->setEnabled(false);
                 }
                 else{
-                    QMessageBox::critical (0,"Ошибка!",TCPserver->errorString(),QMessageBox::Yes);
+                    QMessageBox::critical (0,"Ошибка!","Данный порт занят!",QMessageBox::Ok);
                     ui->receive->setChecked(false);
                 }
 
@@ -131,15 +148,26 @@ void MainWindow::receivingMessage()
         ui->address->setEnabled(true);
         ui->UDP->setEnabled(true);
         ui->TCP->setEnabled(true);
-        disconnect(UDPserver,0,0,0);
-        UDPserver->close();
+        QMap<int,QTcpSocket*>::iterator it=MapTcpSok->begin();
+        for (;it != MapTcpSok->end(); ++it) {
+            QTcpSocket* socket= it.value();
+            socket->deleteLater();
+        }
+        UdpSocket->close();
         TCPserver->close();
+        delete MapTcpSok;
+        countTcpSok=0;
     }
 }
 
 void MainWindow::timeSend()
 {
     if(ui->send->isChecked()){
+        nameCap=QFileDialog::getOpenFileName();
+        if(nameCap.isEmpty())
+            return;
+        capture= cvCreateFileCapture( nameCap.toLatin1() );
+        qDebug()<<nameCap;
         if(""==ui->port->currentText()||""==ui->address->currentText()){
             QMessageBox::critical (0,"Ошибка!","Адресс или порт не выбраны!",QMessageBox::Yes);
             ui->send->setChecked(false);
@@ -159,11 +187,6 @@ void MainWindow::timeSend()
 
         if(ui->TCP->isChecked()){
             TcpSocket->connectToHost(ui->address->currentText(),ui->port->currentText().toInt());
-//                connect(TcpSocket, SIGNAL(connected()), SLOT(slotConnected()));
-//                connect(TcpSocket, SIGNAL(readyRead()), SLOT(slotReadyRead()));
-//                connect(TcpSocket, SIGNAL(error(QAbstractSocket::SocketError)),
-//                            this,         SLOT(slotError(QAbstractSocket::SocketError))
-//                           );
         }
             pTimer->setInterval(time);
             pTimer->start();
@@ -176,7 +199,8 @@ void MainWindow::timeSend()
         ui->UDP->setEnabled(true);
         ui->TCP->setEnabled(true);
         pTimer->stop();
-        UDPserver->close();
+
+        UdpSocket->close();
         TcpSocket->disconnect();
         TcpSocket->close();
     }
@@ -197,63 +221,74 @@ void MainWindow::clickedTCP()
 
 void MainWindow::messageRead()
 {
-
-    QDateTime dateTime;
-    QByteArray baDatagram;
-    do{
-        baDatagram.resize(UDPserver->pendingDatagramSize());
-        UDPserver->readDatagram(baDatagram.data(),baDatagram.size());
-    }while (UDPserver->hasPendingDatagrams());
-    QDataStream in(&baDatagram, QIODevice::ReadOnly);
+    int m_nNextBlockSize=0;
     QString str;
-    in>>str;
-    ui->logList->append(dateTime.currentDateTime().toString()+" :"+str);
+    if (!m_nNextBlockSize) {
+        QDataStream in(UdpSocket);
+        if (UdpSocket->bytesAvailable() < sizeof(quint32)) {
+                return;
+        }
+        in>>m_nNextBlockSize>>str;;
+        qDebug()<<m_nNextBlockSize;
+    }
+    if(UdpSocket->bytesAvailable())
+        return;
+    ui->logList->append("Client has sent- :"+str);
+    QByteArray bar=UdpSocket->read(m_nNextBlockSize);
+    QBuffer buffer(&bar);
+    buffer.open(QIODevice::ReadOnly);
+    QImageReader reader(&buffer,"jpg");
+    QImage imgDst=reader.read();
+
+    if(!imgDst.isNull())
+      ui->lol->setPixmap(QPixmap::fromImage(imgDst.scaled(ui->lol->width(), ui->lol->height())));
 }
 
 void MainWindow::slotNewTcpConnection()
 {
-    QTcpSocket* pClientSocket = TCPserver->nextPendingConnection();
+    QTcpSocket* pClientSocket;
+    pClientSocket = TCPserver->nextPendingConnection();
         connect(pClientSocket, SIGNAL(disconnected()),
                 pClientSocket, SLOT(deleteLater())
                );
         connect(pClientSocket, SIGNAL(readyRead()),
                 this,          SLOT(slotReadTcpClient())
                 );
+    countTcpSok++;
+    MapTcpSok->insert(countTcpSok,pClientSocket);
 }
 
 void MainWindow::slotReadTcpClient()
 {
-    int m_nNextBlockSize=0;
     QTcpSocket* pClientSocket = (QTcpSocket*)sender();
-    QDataStream in(pClientSocket);
-    for (;;) {
-            if (!m_nNextBlockSize) {
-                if (pClientSocket->bytesAvailable() < (int)sizeof(quint16)) {
-                    break;
-                }
-                in >> m_nNextBlockSize;
-            }
 
-            if (pClientSocket->bytesAvailable() < m_nNextBlockSize) {
-                break;
-            }
-
-            QString str;
-            in >> str;
-
-            //QString strMessage = "Client has sent - " + str;
-            ui->logList->append(str);
-
-            m_nNextBlockSize = 0;
-
-
+    QString str;
+    int m_nNextBlockSize=0;
+    if (!m_nNextBlockSize) {
+        QDataStream in(pClientSocket);
+        if (pClientSocket->bytesAvailable() < sizeof(quint32)) {
+                return;
+        }
+        in>>m_nNextBlockSize>> str;
+        qDebug()<<m_nNextBlockSize;
     }
+    if(m_nNextBlockSize>pClientSocket->bytesAvailable())
+        return;
+    QByteArray bar=pClientSocket->read(m_nNextBlockSize);
+    QBuffer buffer(&bar);
+    buffer.open(QIODevice::ReadOnly);
+    QImageReader reader(&buffer,"jpg");
+    QImage imgDst=reader.read();
+      QString strMessage ="Client has sent TCP- " + str;
+      ui->logList->append(strMessage);
+    if(!imgDst.isNull())
+      ui->lol->setPixmap(QPixmap::fromImage(imgDst.scaled(ui->lol->width(), ui->lol->height())));
 }
 
 void MainWindow::closeEvent(QCloseEvent *event)
 {
-    UDPserver->close();
-    UDPserver->abort();
+    UdpSocket->close();
+    UdpSocket->abort();
     TCPserver->close();
     TcpSocket->close();
     TcpSocket->abort();

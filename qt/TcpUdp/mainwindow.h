@@ -21,7 +21,6 @@ public:
     explicit MainWindow(QWidget *parent = 0);
     ~MainWindow();
     void sendToTcpClient(QTcpSocket* pSocket, QByteArray &arrBlock);
-    void slotError(QAbstractSocket::SocketError err);
 private:
     CvCapture* capture;
     Ui::MainWindow *ui;
@@ -32,6 +31,7 @@ private:
     QString nameCap;
     QMap<int,QTcpSocket*> *MapTcpSok;
     int countTcpSok;
+    int m_nNextBlockSize;
 private slots:
     void sendMessage();
     void receivingMessage();
@@ -41,6 +41,13 @@ private slots:
     void messageRead();
     void slotNewTcpConnection();
     void slotReadTcpClient();
+    void clickedrImage();
+    void clickedrMessage();
+    void clickedUpload();
+    void clickedCheckRateOff();
+    void clickedCheckRateOn();
+    void slotTcpSockedConnected();
+    void slotError(QAbstractSocket::SocketError err);
  protected:
     void closeEvent(QCloseEvent *event);
 };

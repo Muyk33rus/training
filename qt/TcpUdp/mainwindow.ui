@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>370</width>
+    <width>400</width>
     <height>640</height>
    </rect>
   </property>
@@ -23,9 +23,9 @@
    <widget class="QWidget" name="layoutWidget">
     <property name="geometry">
      <rect>
-      <x>20</x>
+      <x>10</x>
       <y>0</y>
-      <width>325</width>
+      <width>376</width>
       <height>400</height>
      </rect>
     </property>
@@ -120,6 +120,24 @@
          <item>
           <layout class="QVBoxLayout" name="verticalLayout_5">
            <item>
+            <layout class="QHBoxLayout" name="horizontalLayout_10">
+             <item>
+              <widget class="QCheckBox" name="checkRateOn">
+               <property name="text">
+                <string>rate on</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QCheckBox" name="checkRateOff">
+               <property name="text">
+                <string>rate off</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <item>
             <layout class="QHBoxLayout" name="horizontalLayout_7">
              <item>
               <spacer name="horizontalSpacer_8">
@@ -175,6 +193,24 @@
           </spacer>
          </item>
          <item>
+          <layout class="QVBoxLayout" name="verticalLayout_8">
+           <item>
+            <widget class="QCheckBox" name="rImage">
+             <property name="text">
+              <string>image</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QCheckBox" name="rMessage">
+             <property name="text">
+              <string>message</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </item>
+         <item>
           <spacer name="horizontalSpacer">
            <property name="orientation">
             <enum>Qt::Horizontal</enum>
@@ -218,6 +254,13 @@
              </property>
              <property name="default">
               <bool>false</bool>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="upload">
+             <property name="text">
+              <string>UPLOAD</string>
              </property>
             </widget>
            </item>
@@ -369,7 +412,7 @@
      <rect>
       <x>10</x>
       <y>409</y>
-      <width>351</width>
+      <width>371</width>
       <height>221</height>
      </rect>
     </property>

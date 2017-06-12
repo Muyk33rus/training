@@ -1,24 +1,22 @@
 #include <iostream>
 #include <functional>
+#include <array>
+using namespace std;
+enum type {les, gre};
 
-enum type {less, greater};
 template <typename T,type t>
-
-template <typename T,type t>
-void gnomSort(T *array,int size){
+void gnomSort(T array[],int size){
     std::function<bool(T,T)> predicate;
-    int i=0,count=0;
+    int i=0;
     switch (t) {
-            case greater:
+            case gre:
                 predicate = [] (T x, T y) { return x<=y?true:false; };
             break;
-            case less:
+            case les:
                 predicate = [] (T x, T y) { return x>=y?true:false; };
             break;
         }
     while(i<size){
-        count++;
-//        std::cout<<"iteration :"<<count<<" :";
         if(i==0||predicate(array[i-1],array[i]))
             i++;
         else{
@@ -27,22 +25,18 @@ void gnomSort(T *array,int size){
             array[i]=temp;
             i--;
         }
-//        for (int i = 0; i < size; i++){
-//            std::cout << array[i] << ", ";
-//        }
-//        std::cout <<std::endl;
     }
-    std::cout<<"The  number of iterations :"<<count<<" :";
-    for (int i = 0; i < size; i++){
-        std::cout << array[i] << ", ";
-    }
-    std::cout <<std::endl;
 }
 
 
 int main(){
 
-    int arr2[] = {1, 0, -1, 1, 54, 2, 3};
-    gnomSort<int, greater> (arr2, 7);
-
+    array<int,7> arr = {1, 0, -1, 1, 54, 2, 3};
+    for(auto i:arr){
+        cout<<i<<" ";
+    }cout<<endl;
+    gnomSort<int, gre> (arr.data(), arr.size());
+    for(auto i:arr){
+        cout<<i<<" ";
+    }cout<<endl;
 }
